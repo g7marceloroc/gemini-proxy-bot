@@ -1,13 +1,10 @@
 {
   "name": "gemini-proxy-bot",
-  "version": "1.0.0",
-  "description": "Proxy Gemini compatível com OpenAI",
-  "main": "app.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
-    "start": "node app.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.18.2"
   }
 }
