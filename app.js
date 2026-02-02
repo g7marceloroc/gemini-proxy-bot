@@ -1,38 +1,44 @@
-const express = require("express");
+import express from "express";
+import fetch from "node-fetch";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(express.json());
 
-// rota raiz (teste de vida)
-app.get("/", (req, res) => {
-  res.send("Gemini Proxy OK");
+const PORT = process.env.PORT || 8080;
+
+/* 🔹 ENDPOINT OBRIGATÓRIO PARA BOT NINJA */
+app.get("/v1/models", (req, res) => {
+  res.json({
+    object: "list",
+    data: [
+      {
+        id: "gpt-3.5-turbo",
+        object: "model",
+        created: 0,
+        owned_by: "openai"
+      }
+    ]
+  });
 });
 
-// rota compatível com OpenAI
+/* 🔹 CHAT COMPLETIONS */
 app.post("/v1/chat/completions", async (req, res) => {
   try {
     const messages = req.body.messages || [];
-    const lastMessage = messages[messages.length - 1]?.content || "";
+    const userText = messages.map(m => m.content).join("\n");
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: lastMessage }]
-            }
-          ]
+          contents: [{ parts: [{ text: userText }] }]
         })
       }
     );
 
     const data = await response.json();
-
     const text =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ||
       "Sem resposta do Gemini";
@@ -54,10 +60,10 @@ app.post("/v1/chat/completions", async (req, res) => {
       ]
     });
   } catch (err) {
-    res.status(500).json({ error: "Erro no proxy Gemini" });
+    res.status(500).json({ error: "Erro no Gemini Proxy" });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Gemini Proxy rodando na porta", PORT);
 });
