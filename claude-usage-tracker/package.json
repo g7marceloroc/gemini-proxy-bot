@@ -1,0 +1,7 @@
+{
+  "name": "claude-usage-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dashboard em tempo real de utilização de tokens/limites do Claude (Vercel + coletor local)"
+}
