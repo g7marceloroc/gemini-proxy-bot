@@ -1,0 +1,13 @@
+{
+  "name": "Uso do Claude",
+  "short_name": "Uso Claude",
+  "description": "Acompanhamento em tempo real dos limites e tokens do Claude",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0f",
+  "theme_color": "#0d0d0f",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
