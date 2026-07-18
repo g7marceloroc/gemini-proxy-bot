@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0d0d0f" />
+<meta name="color-scheme" content="dark" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Uso Claude" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<title>Uso do Claude</title>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #1a1a1e;
+    --surface-2: #232329;
+    --ink: #f2f2f4;
+    --ink-2: #a3a3ad;
+    --ink-3: #6f6f78;
+    --track: #2e2e36;
+    --session: #e8a33d;   /* laranja — sessão */
+    --weekly: #4d8fe8;    /* azul — semanal */
+    --danger: #e05d5d;
+    --ok: #57b98a;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { overscroll-behavior-y: none; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    padding: 0 16px calc(32px + env(safe-area-inset-bottom));
+  }
+  .wrap { max-width: 640px; margin: 0 auto; display: grid; gap: 14px; }
+  header {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin: 0 -16px 2px; padding: calc(10px + env(safe-area-inset-top)) 20px 10px;
+    background: var(--bg);
+    background: color-mix(in srgb, var(--bg) 93%, transparent);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  header h1 { font-size: 19px; font-weight: 650; white-space: nowrap; }
+  .hdr-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  #freshness { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #freshness.stale { color: var(--danger); }
+  #wakeBtn {
+    flex: none; width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid var(--track); background: var(--surface);
+    color: var(--ink-3); font-size: 17px; line-height: 1; cursor: pointer;
+  }
+  #wakeBtn.on { color: var(--session); border-color: var(--session); }
+  #wakeBtn[hidden] { display: none; }
+  .card { background: var(--surface); border-radius: var(--radius); padding: 18px 18px 16px; }
+  .card h2 { font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px; }
+  .meter { margin-bottom: 16px; }
+  .meter:last-child { margin-bottom: 2px; }
+  .meter .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .meter .name { font-size: 16px; font-weight: 600; }
+  .meter .pct { font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .bar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 3px; width: 0%; transition: width .5s ease; }
+  .meter .sub { margin-top: 7px; font-size: 13px; color: var(--ink-3); }
+  .divider { height: 1px; background: var(--track); margin: 16px 0; }
+
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .tile { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+  .tile .label { font-size: 12px; color: var(--ink-3); }
+  .tile .value { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .tile .hint { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-size: 12px; font-weight: 600; color: var(--ink-3); padding: 4px 0; }
+  th:not(:first-child), td:not(:first-child) { text-align: right; }
+  td { padding: 6px 0; font-size: 13.5px; border-top: 1px solid var(--track); color: var(--ink-2); }
+  td:first-child { color: var(--ink); }
+
+  #spark { width: 100%; height: 90px; display: block; }
+  #sparkTip {
+    position: fixed; pointer-events: none; display: none;
+    background: var(--surface-2); color: var(--ink); font-size: 12px;
+    padding: 5px 8px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.5);
+    font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 10;
+  }
+  .empty { text-align: center; color: var(--ink-2); padding: 42px 18px; }
+  .empty code { background: var(--surface-2); padding: 2px 6px; border-radius: 6px; font-size: 13px; overflow-wrap: anywhere; }
+  .footnote { font-size: 12px; color: var(--ink-3); text-align: center; }
+
+  /* Telas estreitas (celular) — mais denso, tudo importante acima da dobra */
+  @media (max-width: 480px) {
+    body { padding-left: 10px; padding-right: 10px; font-size: 14px; }
+    header { margin: 0 -10px 0; padding-left: 14px; padding-right: 14px; }
+    header h1 { font-size: 17px; }
+    .wrap { gap: 10px; }
+    .card { padding: 14px 14px 12px; border-radius: 14px; }
+    .card h2 { margin-bottom: 9px; }
+    .meter { margin-bottom: 12px; }
+    .meter .name { font-size: 15px; }
+    .meter .pct { font-size: 13.5px; }
+    .meter .sub { font-size: 12px; margin-top: 5px; }
+    .divider { margin: 12px 0; }
+    .tiles { gap: 8px; }
+    .tile { padding: 10px 12px; border-radius: 10px; }
+    .tile .value { font-size: 17px; }
+    #spark { height: 72px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Uso do Claude</h1>
+    <div class="hdr-right">
+      <span id="freshness">carregando…</span>
+      <button id="wakeBtn" hidden title="Manter a tela ligada" aria-label="Manter a tela ligada" aria-pressed="false">☀</button>
+    </div>
+  </header>
+  <div id="app"></div>
+  <p class="footnote">Custo estimado com preços de tabela da API — os limites do plano usam os percentuais oficiais da conta.</p>
+</div>
+<div id="sparkTip"></div>
+
+<script>
+const REFRESH_MS = 15000;
+const app = document.getElementById("app");
+const freshness = document.getElementById("freshness");
+let readToken = localStorage.getItem("readToken") || "";
+
+const fmtInt = (n) => (n ?? 0).toLocaleString("pt-BR");
+const fmtTok = (n) => {
+  if (n == null) return "–";
+  if (n >= 1e9) return (n / 1e9).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " B";
+  if (n >= 1e6) return (n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " M";
+  if (n >= 1e3) return (n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " k";
+  return fmtInt(n);
+};
+const fmtUsd = (n) =>
+  n == null ? "–" : "US$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function fmtCountdown(iso) {
+  if (!iso) return "";
+  const diff = new Date(iso).getTime() - Date.now();
+  if (isNaN(diff)) return "";
+  if (diff <= 0) return "reiniciando…";
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  if (h >= 48) {
+    const when = new Date(iso);
+    return "Reinicia " + when.toLocaleDateString("pt-BR", { weekday: "short" }) + ", " +
+      when.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+  return h > 0 ? `Reinicia em ${h} h ${m} min` : `Reinicia em ${m} min`;
+}
+
+function fmtAgo(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `há ${s}s`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `há ${m} min`;
+  return `há ${Math.round(m / 60)} h`;
+}
+
+function meter(name, bucket, color) {
+  if (!bucket || bucket.utilization == null) return "";
+  const pct = Math.max(0, Math.min(100, bucket.utilization));
+  const fill = pct >= 90 ? "var(--danger)" : color;
+  const sub = fmtCountdown(bucket.resetsAt);
+  return `
+    <div class="meter">
+      <div class="row"><span class="name">${name}</span><span class="pct">${pct}% utilizado</span></div>
+      <div class="bar"><i style="width:${pct}%;background:${fill}"></i></div>
+      ${sub ? `<div class="sub">${sub}</div>` : ""}
+    </div>`;
+}
+
+function tokenTiles(b) {
+  if (!b) return "";
+  return `
+    <div class="tiles">
+      <div class="tile"><div class="label">Entrada</div><div class="value">${fmtTok(b.input)}</div></div>
+      <div class="tile"><div class="label">Saída</div><div class="value">${fmtTok(b.output)}</div></div>
+      <div class="tile"><div class="label">Cache (leitura / escrita)</div><div class="value">${fmtTok(b.cacheRead)} / ${fmtTok(b.cacheWrite)}</div></div>
+      <div class="tile"><div class="label">Custo estimado</div><div class="value">${fmtUsd(b.costUsd)}</div><div class="hint">${fmtInt(b.requests)} respostas</div></div>
+    </div>`;
+}
+
+function modelTable(byModel) {
+  const rows = Object.entries(byModel || {})
+    .sort((a, b) => b[1].costUsd - a[1].costUsd)
+    .slice(0, 8)
+    .map(([model, b]) => {
+      const short = model.replace(/^claude-/, "").replace(/-\d{8}$/, "");
+      return `<tr><td>${short}</td><td>${fmtTok(b.input + b.output)}</td><td>${fmtUsd(b.costUsd)}</td></tr>`;
+    })
+    .join("");
+  if (!rows) return "";
+  return `
+    <div class="card">
+      <h2>Por modelo — últimos 7 dias</h2>
+      <table>
+        <thead><tr><th>Modelo</th><th>Tokens</th><th>Custo est.</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+let sparkData = [];
+function sparkline(history) {
+  sparkData = (history || []).filter((p) => p.session != null);
+  if (sparkData.length < 2) return "";
+  return `
+    <div class="card">
+      <h2>Sessão — histórico</h2>
+      <svg id="spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+    </div>`;
+}
+
+function drawSpark() {
+  const svg = document.getElementById("spark");
+  if (!svg || sparkData.length < 2) return;
+  const W = 600, H = 90, pad = 6;
+  const t0 = sparkData[0].t, t1 = sparkData[sparkData.length - 1].t;
+  const x = (t) => pad + ((t - t0) / Math.max(1, t1 - t0)) * (W - 2 * pad);
+  const y = (v) => H - pad - (Math.min(100, v) / 100) * (H - 2 * pad);
+  const pts = sparkData.map((p) => `${x(p.t).toFixed(1)},${y(p.session).toFixed(1)}`).join(" ");
+  svg.innerHTML =
+    `<line x1="${pad}" y1="${y(100)}" x2="${W - pad}" y2="${y(100)}" stroke="var(--track)" stroke-dasharray="3 4"/>` +
+    `<polyline points="${pts}" fill="none" stroke="var(--session)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` +
+    `<circle id="sparkDot" r="4" fill="var(--session)" stroke="var(--surface)" stroke-width="2" style="display:none"/>`;
+
+  const tip = document.getElementById("sparkTip");
+  const dot = svg.querySelector("#sparkDot");
+  svg.style.touchAction = "none"; // permite arrastar o dedo sobre o gráfico
+  const showAt = (clientX, clientY) => {
+    const rect = svg.getBoundingClientRect();
+    const t = t0 + ((clientX - rect.left) / rect.width) * (t1 - t0);
+    let best = sparkData[0];
+    for (const p of sparkData) if (Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
+    dot.style.display = "";
+    dot.setAttribute("cx", x(best.t));
+    dot.setAttribute("cy", y(best.session));
+    tip.style.display = "block";
+    tip.textContent = `${new Date(best.t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} — ${best.session}%`;
+    tip.style.left = Math.min(clientX + 12, window.innerWidth - 110) + "px";
+    tip.style.top = clientY - 34 + "px";
+  };
+  const hide = () => {
+    dot.style.display = "none";
+    tip.style.display = "none";
+  };
+  svg.onpointermove = (ev) => showAt(ev.clientX, ev.clientY);
+  svg.onpointerdown = (ev) => showAt(ev.clientX, ev.clientY);
+  svg.onpointerleave = hide;
+  svg.onpointerup = (ev) => { if (ev.pointerType !== "mouse") hide(); };
+}
+
+function render(data) {
+  const { latest, history } = data;
+  if (!latest) {
+    app.innerHTML = `
+      <div class="card empty">
+        <p><strong>Nenhum dado ainda.</strong></p>
+        <p style="margin-top:10px">Rode o coletor na sua máquina:</p>
+        <p style="margin-top:8px"><code>TRACKER_URL=${location.origin} INGEST_TOKEN=… node collector/collect.mjs</code></p>
+      </div>`;
+    freshness.textContent = "aguardando coletor";
+    return;
+  }
+
+  const l = latest.limits;
+  const t = latest.tokens;
+  let html = "";
+
+  if (l) {
+    html += `<div class="card">${meter("Sessão atual", l.session, "var(--session)")}</div>`;
+    const weeklyBars = meter("Todos os modelos", l.weekly, "var(--weekly)") +
+      (l.weeklyModel ? `<div class="divider"></div>` + meter(labelForModelBucket(l.weeklyModel), l.weeklyModel, "var(--weekly)") : "");
+    if (weeklyBars.trim()) html += `<div class="card"><h2>Limites semanais</h2>${weeklyBars}</div>`;
+  }
+
+  if (t) {
+    html += `<div class="card"><h2>Tokens — últimas 5 horas</h2>${tokenTiles(t.last5h)}</div>`;
+    html += `<div class="card"><h2>Tokens — últimos 7 dias</h2>${tokenTiles(t.last7d)}</div>`;
+    html += modelTable(t.byModel7d);
+  }
+
+  html += sparkline(history);
+  app.innerHTML = html;
+  drawSpark();
+
+  const age = Date.now() - (latest.receivedAt || latest.collectedAt || 0);
+  freshness.textContent = "atualizado " + fmtAgo(age) + (latest.host ? ` · ${latest.host}` : "");
+  freshness.classList.toggle("stale", age > 5 * 60000);
+}
+
+function labelForModelBucket(bucket) {
+  const k = (bucket.key || "").toLowerCase();
+  if (k.includes("fable")) return "Apenas Fable";
+  if (k.includes("opus")) return "Apenas Opus";
+  if (k.includes("sonnet")) return "Apenas Sonnet";
+  return "Modelo específico";
+}
+
+async function refresh() {
+  try {
+    const url = "/api/usage" + (readToken ? `?token=${encodeURIComponent(readToken)}` : "");
+    const res = await fetch(url, { cache: "no-store" });
+    if (res.status === 401) {
+      readToken = prompt("Este dashboard é protegido. Informe o token de leitura:") || "";
+      if (readToken) {
+        localStorage.setItem("readToken", readToken);
+        return refresh();
+      }
+      freshness.textContent = "acesso negado";
+      return;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    render(await res.json());
+  } catch (err) {
+    freshness.textContent = "erro ao carregar";
+    freshness.classList.add("stale");
+    console.error(err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Atualização consciente de bateria: pausa quando a aba está em segundo plano
+// e atualiza na hora ao voltar.
+// ---------------------------------------------------------------------------
+let timer = null;
+function startTimer() {
+  stopTimer();
+  timer = setInterval(refresh, REFRESH_MS);
+}
+function stopTimer() {
+  if (timer) clearInterval(timer);
+  timer = null;
+}
+
+// ---------------------------------------------------------------------------
+// Wake Lock: mantém a tela ligada enquanto o painel está aberto ao lado.
+// ---------------------------------------------------------------------------
+const wakeBtn = document.getElementById("wakeBtn");
+let wakeLock = null;
+let wakeWanted = localStorage.getItem("wakeWanted") === "1";
+
+async function acquireWake() {
+  if (!("wakeLock" in navigator) || document.hidden) return;
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release", () => { wakeLock = null; updateWakeBtn(); });
+  } catch (err) {
+    console.warn("wake lock:", err.message);
+  }
+  updateWakeBtn();
+}
+
+async function releaseWake() {
+  try { await wakeLock?.release(); } catch {}
+  wakeLock = null;
+  updateWakeBtn();
+}
+
+function updateWakeBtn() {
+  wakeBtn.classList.toggle("on", Boolean(wakeLock));
+  wakeBtn.setAttribute("aria-pressed", String(Boolean(wakeLock)));
+  wakeBtn.title = wakeLock ? "Tela vai ficar ligada — toque para desativar" : "Manter a tela ligada";
+}
+
+if ("wakeLock" in navigator) {
+  wakeBtn.hidden = false;
+  wakeBtn.onclick = () => {
+    wakeWanted = !wakeWanted;
+    localStorage.setItem("wakeWanted", wakeWanted ? "1" : "0");
+    wakeWanted ? acquireWake() : releaseWake();
+  };
+  if (wakeWanted) acquireWake();
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopTimer();
+  } else {
+    refresh();
+    startTimer();
+    if (wakeWanted) acquireWake(); // o sistema solta o lock ao sair da aba
+  }
+});
+
+refresh();
+startTimer();
+</script>
+</body>
+</html>
